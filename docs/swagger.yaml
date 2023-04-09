@@ -1,0 +1,7 @@
+info:
+  contact: {}
+paths:
+  /Login:
+    post:
+      responses: {}
+swagger: "2.0"

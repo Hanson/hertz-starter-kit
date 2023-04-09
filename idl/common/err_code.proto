@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package errorCode;
+
+option go_package = "common/err_code";
+
+enum ErrCode {
+	SUCCESS = 0;
+
+	// 系统类
+	ErrSystem = 1000;
+	ErrValidate = 1001; // 参数校验不通过
+}
+

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package public;
+
+option go_package = "public/auth";
+
+import "api.proto";
+
+message AdminLoginReq {
+	string username = 1[(api.vd) = "$!=''"];
+	string password = 2[(api.vd) = "$!=''"];
+}
+
+service authService {
+}

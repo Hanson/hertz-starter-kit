@@ -1,0 +1,5 @@
+package paginate
+
+func Paginate() {
+
+}
