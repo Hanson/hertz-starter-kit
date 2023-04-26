@@ -3,23 +3,25 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/hanson/go-toolbox/utils"
 	"github.com/hertz-contrib/cors"
-	"github.com/hertz-contrib/logger/accesslog"
+	"github.com/tidwall/sjson"
+	"gorm.io/gorm/logger"
 	"hertz-starter-kit/biz/router/middleware"
 	"hertz-starter-kit/config"
 	"hertz-starter-kit/db"
-	"io"
 	"log"
-	"os"
+	"strings"
 	"time"
 )
 
 func main() {
 	// 配置
-	log.SetFlags(log.Llongfile | log.LstdFlags)
-	log.SetOutput(getMultiWriter())
+	utils.KeepNewDateLogFile()
 
 	config.LoadConfig()
 
@@ -41,29 +43,40 @@ func main() {
 		server.WithHostPorts(config.Cfg.HostPort),
 	)
 
-	corsMiddleware(h)
-	h.Use(accesslog.New(accesslog.WithFormat("[${latency}] method: ${method} path: ${path} req_body: ${body} rsp_body: ${resBody}")))
+	h.Use(corsMiddleware())
+	h.Use(accessLogMiddleware())
 	middleware.InitAdminJwt()
 	register(h)
 	h.Spin()
 }
 
-func corsMiddleware(h *server.Hertz) {
-	h.Use(cors.New(cors.Config{
+func corsMiddleware() app.HandlerFunc {
+	return cors.New(cors.Config{
 		AllowOrigins:  []string{"*"},
 		AllowMethods:  []string{"POST", "OPTIONS"},
 		AllowHeaders:  []string{"Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders: []string{"Content-Length", "Access-Control-Allow-Origin", "Access-Control-Allow-Headers", "Cache-Control", "Content-Language", "Content-Type"},
 		//AllowCredentials: true,
 		MaxAge: 12 * time.Hour,
-	}))
+	})
 }
 
-func getMultiWriter() io.Writer {
-	f, err := os.OpenFile(fmt.Sprintf("logs\\%s.txt", time.Now().Format("2006-01-02")), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		log.Fatalf("error opening file: %v", err)
+func accessLogMiddleware() app.HandlerFunc {
+	return func(ctx context.Context, c *app.RequestContext) {
+		if strings.Contains(c.Request.URI().String(), "/ws/echo") {
+			c.Next(ctx)
+			return
+		}
+		reqHeaders := make([]string, 0)
+		c.Request.Header.VisitAll(func(k, v []byte) {
+			reqHeaders = append(reqHeaders, string(k)+"="+string(v))
+		})
+		traceId := fmt.Sprintf("%d%s", time.Now().UnixMicro(), utils.RandStr(8, utils.RandomStringModNumber))
+		c.Set("trace_id", traceId)
+		log.Printf("req %strace_id:%s path:%s%s header:%+v, body:%s", logger.Green, traceId, c.Request.Path(), logger.Reset, strings.Join(reqHeaders, "&"), c.Request.Body())
+		c.Next(ctx)
+		resetBody, _ := sjson.Set(string(c.Response.Body()), "hint", traceId)
+		c.Response.SetBody([]byte(resetBody))
+		log.Printf("rsp %strace_id:%s%s body:%s", logger.Green, traceId, logger.Reset, c.Response.Body())
 	}
-
-	return io.MultiWriter(os.Stdout, f)
 }

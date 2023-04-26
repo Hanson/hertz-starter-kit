@@ -41,7 +41,7 @@ require (
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.1 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/hanson/go-toolbox v0.0.0-20230329040804-3888aa7d2f53 // indirect
+	github.com/hanson/go-toolbox v0.0.0-20230426055209-0ff8bbe00468 // indirect
 	github.com/henrylee2cn/ameda v1.4.10 // indirect
 	github.com/henrylee2cn/goutil v0.0.0-20210127050712-89660552f6f8 // indirect
 	github.com/hertz-contrib/hertzsentry v0.1.0 // indirect
