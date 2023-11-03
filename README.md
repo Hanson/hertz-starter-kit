@@ -20,7 +20,7 @@ go run .
 ```
 
 # 开发
-可以全局搜索 hertz-starter-kit， 用你的报名替换掉
+可以全局搜索 hertz-starter-kit， 用你的包名替换掉
 
 ## db
 项目默认使用 MySQL，如有其它需求需要修改，详情看 db 文件夹
