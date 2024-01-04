@@ -1,32 +1,28 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"log"
+	"hertz-starter-kit/utils/log"
 	"time"
 )
 
 type Model struct {
 	db *gorm.DB
-	Db *gorm.DB
 
 	withTrash bool
+
+	ctx context.Context
 }
 
 // NewModel 当有 where 条件并且入参为 struct 时，会自动调用 db.Model
-func NewModel(m ...interface{}) *Model {
-	var db *gorm.DB
-	if len(m) == 0 {
-		db = nil
-	} else {
-		db = Db.Model(m[0])
-	}
+func NewModel(m interface{}, ctx context.Context) *Model {
 	return &Model{
-		db:        db,
-		Db:        db,
+		db:        Db.Model(m).WithContext(ctx).Session(&gorm.Session{NewDB: false}),
 		withTrash: false,
+		ctx:       ctx,
 	}
 }
 
@@ -36,26 +32,24 @@ func (m *Model) WithTrash() *Model {
 }
 
 func (m *Model) Where(query interface{}, args ...interface{}) *Model {
-	if m.db == nil && len(args) == 0 {
-		if _, ok := query.(map[string]interface{}); !ok {
-			m.db = Db.Model(query)
-		}
-	}
-
 	if len(args) > 0 {
-		m.db.Where(query, args[0])
+		m.db = m.db.Where(query, args[0])
 	} else {
-		m.db.Where(query)
+		m.db = m.db.Where(query)
 	}
 
 	return m
 }
 
+func (m *Model) SoftDelete() *gorm.DB {
+	return m.db.Update("deleted_at", time.Now().Unix())
+}
+
 func (m *Model) WhereIn(field string, args ...interface{}) *Model {
 	if len(args) == 0 {
-		m.db.Where("1 = 0")
+		m.db = m.db.Where("1 = 0")
 	}
-	m.db.Where(fmt.Sprintf("%s IN ?", field), args[0])
+	m.db = m.db.Where(fmt.Sprintf("%s IN ?", field), args[0])
 	return m
 }
 
@@ -146,7 +140,7 @@ func (m *Model) UpdateOrCreate(attributes map[string]interface{}, values map[str
 		all["updated_at"] = all["created_at"]
 		err := m.db.Create(all).Error
 		if err != nil {
-			log.Printf("err: %+v", err)
+			log.Errorf(m.ctx, "err: %+v", err)
 			return nil, err
 		}
 

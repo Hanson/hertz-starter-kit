@@ -1,16 +1,17 @@
 package db
 
 import (
-	"log"
+	"context"
+	"hertz-starter-kit/utils/log"
 )
 
-func AutoMigrate() error {
+func AutoMigrate(ctx context.Context) error {
 	m := &MyMigrator{}
 	m.DB = Db
 	m.Migrator.Migrator.Dialector = Db.Dialector
 	err := m.AutoMigrate()
 	if err != nil {
-		log.Printf("err: %+v", err)
+		log.Errorf(ctx, "err: %+v", err)
 		return err
 	}
 

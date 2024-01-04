@@ -3,6 +3,8 @@ package config
 import (
 	"github.com/joho/godotenv"
 	"os"
+	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -18,6 +20,12 @@ type Config struct {
 	DbPassword string
 	DbAddress  string
 	DbName     string
+
+	AllowOrigins []string
+
+	RedisAddr     string
+	RedisPassword string
+	RedisDb       int
 }
 
 var Cfg *Config
@@ -38,5 +46,16 @@ func LoadConfig() {
 		Cfg.DbName = os.Getenv("DB_NAME")
 
 		Cfg.AppUrl = os.Getenv("APP_URL")
+
+		Cfg.AllowOrigins = strings.Split(os.Getenv("ALLOW_ORIGINS"), ",")
+
+		Cfg.RedisAddr = os.Getenv("REDIS_ADDR")
+		Cfg.RedisPassword = os.Getenv("REDIS_PASSWORD")
+		redisDb := os.Getenv("REDIS_DB")
+		if redisDb != "" {
+			Cfg.RedisDb, _ = strconv.Atoi(redisDb)
+		} else {
+			Cfg.RedisDb = 0
+		}
 	}
 }

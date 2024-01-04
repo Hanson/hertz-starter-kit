@@ -5,36 +5,49 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/hanson/go-toolbox/utils"
-	"github.com/hertz-contrib/cors"
-	"github.com/tidwall/sjson"
-	"gorm.io/gorm/logger"
 	"hertz-starter-kit/biz/router/middleware"
+	"hertz-starter-kit/cache"
 	"hertz-starter-kit/config"
 	"hertz-starter-kit/db"
+	log2 "hertz-starter-kit/utils/log"
 	"log"
-	"strings"
 	"time"
 )
 
 func main() {
+	log.SetFlags(log.LstdFlags)
+	log.SetOutput(utils.GetMultiWriter(utils.HOUR))
+
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "trace_id", fmt.Sprintf("process_start_%d", time.Now().Unix()))
+
 	// 配置
 	utils.KeepNewDateLogFile()
 
 	config.LoadConfig()
 
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("panic: %+v", err)
+			}
+		}()
+
+		Ticker()
+	}()
+
 	// db 操作
-	err := db.InitDb()
+	err := db.InitDb(ctx)
 	if err != nil {
-		log.Printf("err: %+v", err)
+		log2.Errorf(ctx, "err: %+v", err)
 		return
 	}
 
-	err = db.AutoMigrate()
+	err = db.AutoMigrate(ctx)
 	if err != nil {
-		log.Printf("err: %+v", err)
+		log2.Errorf(ctx, "err: %+v", err)
 		return
 	}
 
@@ -43,40 +56,25 @@ func main() {
 		server.WithHostPorts(config.Cfg.HostPort),
 	)
 
-	h.Use(corsMiddleware())
-	h.Use(accessLogMiddleware())
+	h.Use(middleware.Cors())
+	h.Use(middleware.LogTrace())
 	middleware.InitAdminJwt()
 	register(h)
 	h.Spin()
 }
 
-func corsMiddleware() app.HandlerFunc {
-	return cors.New(cors.Config{
-		AllowOrigins:  []string{"*"},
-		AllowMethods:  []string{"POST", "OPTIONS"},
-		AllowHeaders:  []string{"Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization"},
-		ExposeHeaders: []string{"Content-Length", "Access-Control-Allow-Origin", "Access-Control-Allow-Headers", "Cache-Control", "Content-Language", "Content-Type"},
-		//AllowCredentials: true,
-		MaxAge: 12 * time.Hour,
-	})
-}
-
-func accessLogMiddleware() app.HandlerFunc {
-	return func(ctx context.Context, c *app.RequestContext) {
-		if strings.Contains(c.Request.URI().String(), "/ws/echo") {
-			c.Next(ctx)
-			return
+func Ticker() {
+	ticker := time.NewTicker(time.Minute)
+	for {
+		select {
+		case <-ticker.C:
+			now := time.Now()
+			if now.Minute() == 0 {
+				mw := utils.GetMultiWriter(utils.HOUR)
+				db.UpdateLogger(utils.HOUR)
+				cache.ResetRedisLogger()
+				log.SetOutput(mw)
+			}
 		}
-		reqHeaders := make([]string, 0)
-		c.Request.Header.VisitAll(func(k, v []byte) {
-			reqHeaders = append(reqHeaders, string(k)+"="+string(v))
-		})
-		traceId := fmt.Sprintf("%d%s", time.Now().UnixMicro(), utils.RandStr(8, utils.RandomStringModNumber))
-		c.Set("trace_id", traceId)
-		log.Printf("req %strace_id:%s path:%s%s header:%+v, body:%s", logger.Green, traceId, c.Request.Path(), logger.Reset, strings.Join(reqHeaders, "&"), c.Request.Body())
-		c.Next(ctx)
-		resetBody, _ := sjson.Set(string(c.Response.Body()), "hint", traceId)
-		c.Response.SetBody([]byte(resetBody))
-		log.Printf("rsp %strace_id:%s%s body:%s", logger.Green, traceId, logger.Reset, c.Response.Body())
 	}
 }

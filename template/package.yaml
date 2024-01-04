@@ -22,7 +22,7 @@ layouts:
 
       {{range $_, $MethodInfo := .Methods}}
       {{$MethodInfo.Comment}}
-      func {{$MethodInfo.Name}}(_ context.Context, c *app.RequestContext) {
+      func {{$MethodInfo.Name}}(ctx context.Context, c *app.RequestContext) {
       	var err error
       	{{if ne $MethodInfo.RequestTypeName "" -}}
       	var req {{$MethodInfo.RequestTypeName}}
@@ -169,7 +169,7 @@ layouts:
       - '}}'
     body: |+
       {{.Comment}}
-      func {{.Name}}(_ context.Context, c *app.RequestContext) {
+      func {{.Name}}(ctx context.Context, c *app.RequestContext) {
       	var err error
       	{{if ne .RequestTypeName "" -}}
       	var req {{.RequestTypeName}}
