@@ -9,8 +9,10 @@
 * 对所有 proto model 的 string 做了默认 varchar(100)
 
 # 环境
+```
 go install github.com/cloudwego/hertz/cmd/hz@latest
 go install github.com/favadi/protoc-go-inject-tag@latest
+```
 
 # 下载运行
 ```
