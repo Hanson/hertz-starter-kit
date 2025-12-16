@@ -1,11 +1,11 @@
 package db
 
 import (
-	"aggregate_chat/utils/log"
 	"context"
 	"fmt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"hertz-starter-kit/utils/log"
 	"time"
 )
 

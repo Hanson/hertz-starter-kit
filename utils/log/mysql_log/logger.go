@@ -1,11 +1,11 @@
 package mysql_log
 
 import (
-	utils "aggregate_chat/utils/log"
 	"context"
 	"errors"
 	"fmt"
 	logger2 "gorm.io/gorm/logger"
+	utils "hertz-starter-kit/utils/log"
 	"io"
 	"log"
 	"os"
