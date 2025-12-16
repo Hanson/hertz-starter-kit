@@ -3,10 +3,12 @@ package config
 import (
 	"github.com/joho/godotenv"
 	"os"
+	"strconv"
+	"strings"
 )
 
 type Config struct {
-	HostPort string
+	Port string
 
 	AdminUsername string
 	AdminPassword string
@@ -14,10 +16,13 @@ type Config struct {
 	AppUrl string
 
 	// Db 配置
-	DbUsername string
-	DbPassword string
-	DbAddress  string
-	DbName     string
+	DbUsername     string
+	DbPassword     string
+	DbAddress      string
+	DbName         string
+	DBMaxIdleConns int
+
+	AllowOrigins []string
 }
 
 var Cfg *Config
@@ -27,7 +32,7 @@ func LoadConfig() {
 
 	err := godotenv.Load()
 	if err == nil {
-		Cfg.HostPort = os.Getenv("HOST_PORT")
+		Cfg.Port = os.Getenv("PORT")
 
 		Cfg.AdminUsername = os.Getenv("ADMIN_USERNAME")
 		Cfg.AdminPassword = os.Getenv("ADMIN_PASSWORD")
@@ -36,7 +41,11 @@ func LoadConfig() {
 		Cfg.DbPassword = os.Getenv("DB_PASSWORD")
 		Cfg.DbAddress = os.Getenv("DB_ADDRESS")
 		Cfg.DbName = os.Getenv("DB_NAME")
+		Cfg.DBMaxIdleConns, _ = strconv.Atoi(os.Getenv("DB_MAX_IDLE_CONNS"))
 
 		Cfg.AppUrl = os.Getenv("APP_URL")
+
+		Cfg.AllowOrigins = strings.Split(os.Getenv("ALLOW_ORIGINS"), ",")
+
 	}
 }

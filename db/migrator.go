@@ -8,7 +8,6 @@ import (
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/migrator"
 	"gorm.io/gorm/schema"
-	"log"
 	"regexp"
 	"strings"
 )
@@ -135,6 +134,10 @@ func (m MyMigrator) AutoMigrate(values ...interface{}) error {
 
 func (m MyMigrator) MigrateColumn(value interface{}, field *schema.Field, columnType gorm.ColumnType) error {
 	// @修改点
+	//  text 不改表
+	if strings.Contains(strings.ToLower(string(field.DataType)), "text") {
+		return nil
+	}
 	CustomizeField(field)
 
 	// found, smart migrate
@@ -160,7 +163,7 @@ func (m MyMigrator) MigrateColumn(value interface{}, field *schema.Field, column
 
 			if !isSameType {
 				alterColumn = true
-				log.Println("alter")
+
 			}
 		}
 	}
@@ -170,7 +173,7 @@ func (m MyMigrator) MigrateColumn(value interface{}, field *schema.Field, column
 		if length, ok := columnType.Length(); length != int64(field.Size) {
 			if length > 0 && field.Size > 0 {
 				alterColumn = true
-				log.Println("alter")
+
 			} else {
 				// has size in data type and not equal
 				// Since the following code is frequently called in the for loop, reg optimization is needed here
@@ -178,7 +181,7 @@ func (m MyMigrator) MigrateColumn(value interface{}, field *schema.Field, column
 				if !field.PrimaryKey &&
 					(len(matches2) == 1 && matches2[0][1] != fmt.Sprint(length) && ok) {
 					alterColumn = true
-					log.Println("alter")
+
 				}
 			}
 		}
@@ -187,7 +190,7 @@ func (m MyMigrator) MigrateColumn(value interface{}, field *schema.Field, column
 		if precision, _, ok := columnType.DecimalSize(); ok && int64(field.Precision) != precision {
 			if regexp.MustCompile(fmt.Sprintf("[^0-9]%d[^0-9]", field.Precision)).MatchString(m.Migrator.Migrator.DataTypeOf(field)) {
 				alterColumn = true
-				log.Println("alter")
+
 			}
 		}
 	}
@@ -197,7 +200,7 @@ func (m MyMigrator) MigrateColumn(value interface{}, field *schema.Field, column
 		// not primary key & database is nullable
 		if !field.PrimaryKey && nullable {
 			alterColumn = true
-			log.Println("alter")
+
 		}
 	}
 
@@ -206,7 +209,7 @@ func (m MyMigrator) MigrateColumn(value interface{}, field *schema.Field, column
 		// not primary key
 		if !field.PrimaryKey {
 			alterColumn = true
-			log.Println("alter")
+
 		}
 	}
 
@@ -217,18 +220,18 @@ func (m MyMigrator) MigrateColumn(value interface{}, field *schema.Field, column
 		if dvNotNull && !currentDefaultNotNull {
 			// defalut value -> null
 			alterColumn = true
-			log.Println("alter")
+
 		} else if !dvNotNull && currentDefaultNotNull {
 			// null -> default value
 			alterColumn = true
-			log.Println("alter")
+
 		} else if (field.GORMDataType != schema.Time && dv != field.DefaultValue) ||
 			(field.GORMDataType == schema.Time && !strings.EqualFold(strings.TrimSuffix(dv, "()"), strings.TrimSuffix(field.DefaultValue, "()"))) {
 			// default value not equal
 			// not both null
 			if currentDefaultNotNull || dvNotNull {
 				alterColumn = true
-				log.Println("alter")
+
 			}
 		}
 	}
@@ -238,7 +241,7 @@ func (m MyMigrator) MigrateColumn(value interface{}, field *schema.Field, column
 		// not primary key
 		if !field.PrimaryKey {
 			alterColumn = true
-			log.Println("alter")
+
 		}
 	}
 

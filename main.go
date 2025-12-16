@@ -6,16 +6,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/app/middlewares/server/recovery"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/hanson/go-toolbox/utils"
 	"github.com/hertz-contrib/cors"
-	"github.com/tidwall/sjson"
-	"gorm.io/gorm/logger"
 	"hertz-starter-kit/biz/router/middleware"
 	"hertz-starter-kit/config"
 	"hertz-starter-kit/db"
 	"log"
-	"strings"
 	"time"
 )
 
@@ -23,16 +21,19 @@ func main() {
 	// 配置
 	utils.KeepNewDateLogFile()
 
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "trace_id", fmt.Sprintf("process_start_%d", time.Now().Unix()))
+
 	config.LoadConfig()
 
 	// db 操作
-	err := db.InitDb()
+	err := db.InitDb(ctx)
 	if err != nil {
 		log.Printf("err: %+v", err)
 		return
 	}
 
-	err = db.AutoMigrate()
+	err = db.AutoMigrate(ctx)
 	if err != nil {
 		log.Printf("err: %+v", err)
 		return
@@ -40,11 +41,12 @@ func main() {
 
 	h := server.Default(
 		server.WithAutoReloadRender(true, 0),
-		server.WithHostPorts(config.Cfg.HostPort),
+		server.WithHostPorts(":"+config.Cfg.Port),
 	)
 
 	h.Use(corsMiddleware())
-	h.Use(accessLogMiddleware())
+	h.Use(middleware.LogTrace())
+	h.Use(recovery.Recovery(recovery.WithRecoveryHandler(middleware.RecoveryHandler)))
 	middleware.InitAdminJwt()
 	register(h)
 	h.Spin()
@@ -52,31 +54,11 @@ func main() {
 
 func corsMiddleware() app.HandlerFunc {
 	return cors.New(cors.Config{
-		AllowOrigins:  []string{"*"},
-		AllowMethods:  []string{"POST", "OPTIONS"},
-		AllowHeaders:  []string{"Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization"},
-		ExposeHeaders: []string{"Content-Length", "Access-Control-Allow-Origin", "Access-Control-Allow-Headers", "Cache-Control", "Content-Language", "Content-Type"},
-		//AllowCredentials: true,
-		MaxAge: 12 * time.Hour,
+		AllowOrigins:     config.Cfg.AllowOrigins,
+		AllowMethods:     []string{"POST", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization", "Trace-Id"},
+		ExposeHeaders:    []string{"Content-Length", "Access-Control-Allow-Origin", "Access-Control-Allow-Headers", "Cache-Control", "Content-Language", "Content-Type"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
 	})
-}
-
-func accessLogMiddleware() app.HandlerFunc {
-	return func(ctx context.Context, c *app.RequestContext) {
-		if strings.Contains(c.Request.URI().String(), "/ws/echo") {
-			c.Next(ctx)
-			return
-		}
-		reqHeaders := make([]string, 0)
-		c.Request.Header.VisitAll(func(k, v []byte) {
-			reqHeaders = append(reqHeaders, string(k)+"="+string(v))
-		})
-		traceId := fmt.Sprintf("%d%s", time.Now().UnixMicro(), utils.RandStr(8, utils.RandomStringModNumber))
-		c.Set("trace_id", traceId)
-		log.Printf("req %strace_id:%s path:%s%s header:%+v, body:%s", logger.Green, traceId, c.Request.Path(), logger.Reset, strings.Join(reqHeaders, "&"), c.Request.Body())
-		c.Next(ctx)
-		resetBody, _ := sjson.Set(string(c.Response.Body()), "hint", traceId)
-		c.Response.SetBody([]byte(resetBody))
-		log.Printf("rsp %strace_id:%s%s body:%s", logger.Green, traceId, logger.Reset, c.Response.Body())
-	}
 }
