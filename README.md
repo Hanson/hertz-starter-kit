@@ -9,8 +9,10 @@
 * 对所有 proto model 的 string 做了默认 varchar(100)
 
 # 环境
+```
 go install github.com/cloudwego/hertz/cmd/hz@latest
 go install github.com/favadi/protoc-go-inject-tag@latest
+```
 
 # 下载运行
 ```
@@ -20,7 +22,7 @@ go run .
 ```
 
 # 开发
-可以全局搜索 hertz-starter-kit， 用你的报名替换掉
+可以全局搜索 hertz-starter-kit， 用你的包名替换掉
 
 ## db
 项目默认使用 MySQL，如有其它需求需要修改，详情看 db 文件夹
@@ -31,8 +33,15 @@ go run .
 * 对所有 proto text 改为 not null false
 * 对 DeletedAt 进行默认 0
 * db 使用可以用 db.NewInstance 或者 db.NewModel
+* 强制传参 ctx
 
 ## proto
 
 * curd 的开发可以直接复制 idl/README.md,把你的 model 替换掉 demo 即可
 * 执行命令 make update p=path 即可更新 pb，path 为 idl 里面的相对路径
+
+# 运维
+
+## 日志查找
+
+每个请求都会有 trace_id,开发者需要对 context 作为传参并输出到log，可使用 `./trace.sh <trace_id>` 进行查找。

@@ -16,13 +16,17 @@ type Config struct {
 	AppUrl string
 
 	// Db 配置
-	DbUsername     string
-	DbPassword     string
-	DbAddress      string
-	DbName         string
+	DbUsername string
+	DbPassword string
+	DbAddress  string
+	DbName     string
 	DBMaxIdleConns int
 
 	AllowOrigins []string
+
+	RedisAddr     string
+	RedisPassword string
+	RedisDb       int
 }
 
 var Cfg *Config
@@ -47,5 +51,13 @@ func LoadConfig() {
 
 		Cfg.AllowOrigins = strings.Split(os.Getenv("ALLOW_ORIGINS"), ",")
 
+		Cfg.RedisAddr = os.Getenv("REDIS_ADDR")
+		Cfg.RedisPassword = os.Getenv("REDIS_PASSWORD")
+		redisDb := os.Getenv("REDIS_DB")
+		if redisDb != "" {
+			Cfg.RedisDb, _ = strconv.Atoi(redisDb)
+		} else {
+			Cfg.RedisDb = 0
+		}
 	}
 }

@@ -1,9 +1,7 @@
 package log
 
 import (
-	"aggregate_chat/feishu"
 	"context"
-	"fmt"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	hertzzap "github.com/hertz-contrib/logger/zap"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -95,10 +93,6 @@ func Errorf(ctx context.Context, format string, v ...interface{}) {
 	}
 
 	log.Printf(FileWithLineNum()+" [ERROR] <"+traceId+"> "+logger.Red+format+logger.Reset, v...)
-
-	go func() {
-		feishu.SendText(ctx, fmt.Sprintf(FileWithLineNum()+" [ERROR] <"+traceId+"> "+logger.Red+format+logger.Reset, v...))
-	}()
 }
 
 func Infof(ctx context.Context, format string, v ...interface{}) {
@@ -118,7 +112,6 @@ func FileWithLineNum() string {
 	for i := 2; i < 15; i++ {
 		_, file, line, ok := runtime.Caller(i)
 		if ok && !(strings.Contains(file, "common/model") || strings.Contains(file, "db/model") || strings.Contains(file, "gorm")) {
-			file = strings.ReplaceAll(file, "/root/code/aggregate_chat/", "")
 			return file + ":" + strconv.FormatInt(int64(line), 10)
 		}
 	}

@@ -23,11 +23,8 @@ func JsonOk(c *app.RequestContext, data interface{}) {
 	c.JSON(200, resp)
 }
 
-func JsonErr(c *app.RequestContext, err error) {
-	go func() {
-		feishu.SendText(err.Error())
-	}()
-	log.Printf("err: %s", err.Error())
+func JsonErr(ctx context.Context, c *app.RequestContext, err error) {
+	log.Infof(ctx, "err: %s", err.Error())
 	errMsg := err.Error()
 	if errors.GetErrCode(err) == 1000 {
 		errMsg = "系统错误"
@@ -39,8 +36,8 @@ func JsonErr(c *app.RequestContext, err error) {
 	c.JSON(200, resp)
 }
 
-func JsonSystemErr(c *app.RequestContext, err error) {
-	JsonErr(c, errors.System(err.Error()))
+func JsonSystemErr(ctx context.Context, c *app.RequestContext, err error) {
+	JsonErr(ctx, c, errors.System(err.Error()))
 }
 
 func JsonValidateErr(c *app.RequestContext, err error) {
@@ -50,3 +47,4 @@ func JsonValidateErr(c *app.RequestContext, err error) {
 	}
 	c.JSON(200, resp)
 }
+
